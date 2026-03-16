@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실행력 진단 | Executive Diagnostic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Noto+Serif+KR:wght@200;300;400;500&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --ink: #0d0d0b;
+  --ink2: #1a1a16;
+  --ink3: #242420;
+  --ink4: #2e2e28;
+  --gold: #c8a96e;
+  --gold2: #e8cc96;
+  --gold3: #a07840;
+  --gold-dim: rgba(200,169,110,0.12);
+  --gold-line: rgba(200,169,110,0.25);
+  --ivory: #f2ede4;
+  --ivory2: #e8e0d0;
+  --ivory3: #d4c9b4;
+  --muted: #7a7468;
+  --muted2: #5a554e;
+  --border: rgba(200,169,110,0.18);
+  --border2: rgba(200,169,110,0.35);
+  --r: 4px;
+  --r2: 8px;
+  --r3: 2px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Serif KR', 'Georgia', serif;
+  background: var(--ink);
+  color: var(--ivory);
+  min-height: 100vh;
+  line-height: 1.7;
+  overflow-x: hidden;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+}
+
+/* TEXTURE OVERLAY */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.6;
+}
+
+.app {
+  position: relative; z-index: 1;
+  max-width: 800px; margin: 0 auto;
+  padding: 0 1.25rem 4rem;
+}
+
+/* HEADER */
+.site-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 2rem 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3rem;
+}
+.logo {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 14px; font-weight: 300; letter-spacing: 0.3em;
+  color: var(--gold); text-transform: uppercase; font-style: italic;
+}
+.logo span { color: var(--muted); }
+.header-date {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; color: var(--muted); letter-spacing: 0.08em;
+}
+
+/* SCREENS */
+.screen { display: none; animation: fadeUp 0.5s ease forwards; }
+.screen.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+/* INTRO */
+.intro-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; letter-spacing: 0.2em; color: var(--gold3);
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.intro-title {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: clamp(42px, 7vw, 68px);
+  font-weight: 300; line-height: 1.1;
+  color: var(--ivory);
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+.intro-title em { font-style: italic; color: var(--gold); }
+.intro-sub {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 15px; color: var(--muted); line-height: 1.85;
+  max-width: 500px; margin-bottom: 3rem; font-weight: 200;
+}
+.divider {
+  width: 48px; height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  margin: 2rem 0;
+}
+.pillars {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r2); overflow: hidden;
+  margin-bottom: 3rem;
+}
+.pillar {
+  background: var(--ink2); padding: 1.5rem;
+  transition: background 0.3s;
+}
+.pillar:hover { background: var(--ink3); }
+.pillar-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; font-weight: 400;
+  color: var(--gold3); opacity: 0.6;
+  line-height: 1; margin-bottom: 10px;
+}
+.pillar-title {
+  font-size: 13px; font-weight: 500;
+  color: var(--ivory2); margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.pillar-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+.start-row { display: flex; align-items: center; gap: 2rem; }
+.btn-start {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 32px;
+  background: var(--gold); color: var(--ink);
+  border: none; border-radius: var(--r3);
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 16px; font-weight: 400; letter-spacing: 0.12em;
+  cursor: pointer; transition: all 0.25s;
+}
+.btn-start:hover { background: var(--gold2); transform: translateY(-1px); }
+.btn-start svg { width: 14px; height: 14px; }
+.start-meta { font-size: 12px; color: var(--muted); }
+.start-meta strong { color: var(--ivory3); }
+
+/* QUESTION */
+.q-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2.5rem;
+}
+.q-progress-track {
+  flex: 1; height: 1px; background: var(--border);
+  margin: 0 1.5rem; position: relative; overflow: visible;
+}
+.q-progress-fill {
+  height: 1px; background: var(--gold);
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  position: relative;
+}
+.q-progress-fill::after {
+  content: '';
+  position: absolute; right: -3px; top: -3px;
+  width: 7px; height: 7px;
+  background: var(--gold); border-radius: 50%;
+}
+.q-counter {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; color: var(--muted); white-space: nowrap;
+}
+.q-category {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 0.2em;
+  color: var(--gold3); text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.q-category::before {
+  content: ''; display: block;
+  width: 20px; height: 1px; background: var(--gold3);
+}
+.q-text {
+  font-family: 'Noto Serif KR', serif;
+  font-size: clamp(18px, 2.8vw, 23px);
+  font-weight: 300; line-height: 1.8;
+  color: var(--ivory);
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.01em;
+}
+
+.likert {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--border); border-radius: var(--r2);
+  overflow: hidden; margin-bottom: 2.5rem;
+}
+.lk-opt {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: all 0.2s;
+  position: relative;
+}
+.lk-opt:last-child { border-bottom: none; }
+.lk-opt:hover { background: var(--gold-dim); }
+.lk-opt.selected {
+  background: var(--gold-dim);
+  border-color: var(--gold-line);
+}
+.lk-opt.selected + .lk-opt { border-top-color: var(--gold-line); }
+.lk-mark {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border: 1px solid var(--muted2); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.lk-opt.selected .lk-mark {
+  border-color: var(--gold);
+  background: var(--gold);
+}
+.lk-mark-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink); opacity: 0; transition: opacity 0.2s;
+}
+.lk-opt.selected .lk-mark-dot { opacity: 1; }
+.lk-label { font-size: 14px; color: var(--ivory3); flex: 1; }
+.lk-opt.selected .lk-label { color: var(--ivory); }
+.lk-score {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--muted2);
+}
+.lk-opt.selected .lk-score { color: var(--gold3); }
+
+.q-buttons { display: flex; gap: 12px; }
+.btn-ghost {
+  padding: 11px 24px; border-radius: var(--r3);
+  border: 1px solid var(--border2);
+  background: transparent; color: var(--muted);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
+}
+.btn-ghost:hover { border-color: var(--gold3); color: var(--ivory3); }
+.btn-ghost:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-gold {
+  padding: 11px 28px; border-radius: var(--r3);
+  border: 1px solid var(--gold);
+  background: transparent; color: var(--gold);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
+}
+.btn-gold:hover { background: var(--gold); color: var(--ink); }
+.btn-gold:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* RESULT */
+.result-masthead {
+  text-align: center; padding: 3.5rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  background: linear-gradient(160deg, var(--ink2) 0%, var(--ink) 100%);
+  margin-bottom: 2rem; position: relative; overflow: hidden;
+}
+.result-masthead::before {
+  content: '';
+  position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(200,169,110,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.score-display {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 100px; font-weight: 300; line-height: 1;
+  color: var(--gold); margin-bottom: 0.25rem;
+  position: relative; display: inline-block;
+  letter-spacing: -0.02em;
+}
+.score-denom {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px; color: var(--muted); font-weight: 300;
+  margin-bottom: 1.5rem;
+}
+.result-level-badge {
+  display: inline-block;
+  padding: 6px 20px;
+  border: 1px solid var(--gold-line);
+  border-radius: 99px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; letter-spacing: 0.18em;
+  color: var(--gold2); text-transform: uppercase;
+  margin-bottom: 1.25rem; font-weight: 300;
+}
+.result-desc { font-size: 14px; color: var(--muted); max-width: 480px; margin: 0 auto; }
+
+/* SCORE GRID */
+.score-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--r2);
+  overflow: hidden; margin-bottom: 2rem;
+}
+.score-cell {
+  background: var(--ink2); padding: 1.25rem 0.75rem;
+  text-align: center;
+}
+.sc-rank {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; color: var(--muted2); margin-bottom: 8px;
+}
+.sc-num {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 32px; line-height: 1; margin-bottom: 4px; font-weight: 300;
+}
+.sc-name { font-size: 10px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
+.sc-bar { height: 2px; background: var(--ink4); border-radius: 99px; overflow: hidden; }
+.sc-bar-fill { height: 100%; border-radius: 99px; }
+
+/* SECTION */
+.section {
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden; margin-bottom: 2rem;
+}
+.section-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--ink2);
+  display: flex; align-items: center; gap: 12px;
+}
+.section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 0.2em;
+  color: var(--gold3); text-transform: uppercase; font-weight: 300;
+}
+.section-title { font-size: 14px; font-weight: 500; color: var(--ivory2); }
+.section-body { padding: 1.5rem; background: var(--ink); }
+
+/* BAR CHART */
+.bar-row {
+  display: flex; align-items: center;
+  gap: 16px; margin-bottom: 14px;
+}
+.bar-row:last-child { margin-bottom: 0; }
+.bar-name { width: 80px; font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 2px; background: var(--ink4); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+.bar-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; width: 36px; flex-shrink: 0; font-weight: 300;
+}
+
+/* RADAR */
+.radar-wrap { padding: 1.5rem; background: var(--ink); }
+.chart-container { position: relative; width: 100%; height: 300px; }
+
+/* SUMMARY TABLE */
+.stbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stbl th {
+  text-align: left; padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: var(--muted2); text-transform: uppercase;
+  font-weight: 300;
+}
+.stbl td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.stbl tr:last-child td { border-bottom: none; }
+.stbl tr:last-child { background: rgba(200,169,110,0.04); }
+
+/* FEEDBACK */
+.fb-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: var(--r2); overflow: hidden; }
+.fb-item {
+  background: var(--ink); padding: 1.5rem;
+  transition: background 0.2s;
+}
+.fb-item:hover { background: var(--ink2); }
+.fb-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 10px; }
+.fb-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.fb-name { font-size: 14px; font-weight: 500; color: var(--ivory2); margin-bottom: 4px; }
+.fb-badge {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.1em;
+  padding: 2px 10px; border-radius: 99px;
+  text-transform: uppercase; margin-left: 8px;
+}
+.badge-strong { background: rgba(100,160,60,0.15); color: #8bc34a; border: 1px solid rgba(100,160,60,0.3); }
+.badge-develop { background: rgba(200,169,110,0.1); color: var(--gold3); border: 1px solid var(--gold-line); }
+.badge-urgent { background: rgba(180,80,60,0.15); color: #e57373; border: 1px solid rgba(180,80,60,0.3); }
+.fb-body { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 10px; }
+.fb-actions { list-style: none; padding: 0; }
+.fb-actions li {
+  font-size: 12px; color: var(--muted);
+  line-height: 1.7; padding-left: 18px; position: relative;
+}
+.fb-actions li::before {
+  content: '—'; position: absolute; left: 0;
+  color: var(--gold3); font-size: 10px; top: 4px;
+}
+
+/* ACTIONS ROW */
+.result-actions {
+  display: flex; gap: 12px; margin: 2.5rem 0;
+  justify-content: center; flex-wrap: wrap;
+}
+.btn-outline-gold {
+  padding: 12px 28px; border-radius: var(--r3);
+  border: 1px solid var(--gold);
+  background: transparent; color: var(--gold);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 13px; cursor: pointer; transition: all 0.25s;
+  display: flex; align-items: center; gap: 8px;
+}
+.btn-outline-gold:hover { background: var(--gold); color: var(--ink); }
+.btn-outline-muted {
+  padding: 12px 28px; border-radius: var(--r3);
+  border: 1px solid var(--border2);
+  background: transparent; color: var(--muted);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 13px; cursor: pointer; transition: all 0.25s;
+}
+.btn-outline-muted:hover { border-color: var(--muted); color: var(--ivory3); }
+
+/* FOOTER */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 3rem;
+}
+.footer-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 12px; color: var(--muted2); letter-spacing: 0.15em;
+}
+.footer-note { font-size: 11px; color: var(--muted2); font-family: 'DM Mono', monospace; }
+
+@media (max-width: 580px) {
+  .pillars { grid-template-columns: 1fr 1fr; }
+  .score-grid { grid-template-columns: repeat(3, 1fr); }
+  .score-grid .score-cell:nth-child(4),
+  .score-grid .score-cell:nth-child(5) { grid-column: span 1; }
+}
+@media (max-width: 400px) {
+  .score-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="logo">Executive <span>·</span> Diagnostic</div>
+    <div class="header-date" id="hdr-date"></div>
+  </header>
+
+  <!-- INTRO -->
+  <div class="screen active" id="screen-intro">
+    <div class="intro-eyebrow">조직 역량 진단 프로그램 v2.0</div>
+    <h1 class="intro-title">강한 실행력을<br><em>진단</em>합니다</h1>
+    <p class="intro-sub">5가지 핵심 실행 요소를 25개 문항으로 측정하고, 조직의 현 수준과 개선 방향을 제시합니다.</p>
+    <div class="divider"></div>
+    <div class="pillars">
+      <div class="pillar"><div class="pillar-num">01</div><div class="pillar-title">솔직한 대화</div><div class="pillar-desc">현실 인식과 문제 공론화 역량</div></div>
+      <div class="pillar"><div class="pillar-num">02</div><div class="pillar-title">구체적 행동계획</div><div class="pillar-desc">전략을 실행으로 전환하는 체계</div></div>
+      <div class="pillar"><div class="pillar-num">03</div><div class="pillar-title">조기 개입·피드백</div><div class="pillar-desc">데이터 기반 즉각 대응 역량</div></div>
+      <div class="pillar"><div class="pillar-num">04</div><div class="pillar-title">실행 주체 강화</div><div class="pillar-desc">구성원 주도적 실행 문화</div></div>
+      <div class="pillar"><div class="pillar-num">05</div><div class="pillar-title">결과 합의·보상</div><div class="pillar-desc">성과 기반 동기 체계</div></div>
+    </div>
+    <div class="start-row">
+      <button class="btn-start" onclick="startDiagnostic()">
+        진단 시작
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </button>
+      <div class="start-meta"><strong>25문항</strong> · 5점 척도 · 약 5분 소요</div>
+    </div>
+  </div>
+
+  <!-- QUESTION -->
+  <div class="screen" id="screen-question">
+    <div class="q-nav">
+      <div class="q-counter" id="q-counter">01 / 25</div>
+      <div class="q-progress-track">
+        <div class="q-progress-fill" id="q-fill" style="width:0%"></div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)" id="q-pct">0%</div>
+    </div>
+    <div class="q-category" id="q-cat">영역</div>
+    <div class="q-text" id="q-text">질문</div>
+    <div class="likert" id="likert"></div>
+    <div class="q-buttons">
+      <button class="btn-ghost" id="btn-prev" onclick="prevQ()">← 이전</button>
+      <button class="btn-gold" id="btn-next" onclick="nextQ()">다음 →</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="screen" id="screen-result">
+    <div id="result-body">
+
+    <div class="result-masthead">
+      <div class="score-display" id="r-score">—</div>
+      <div class="score-denom">점 / 100점 만점</div>
+      <div class="result-level-badge" id="r-badge">—</div>
+      <div class="result-desc" id="r-desc">—</div>
+    </div>
+
+    <div class="score-grid" id="score-grid"></div>
+
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Analysis 01</div>
+          <div class="section-title">영역별 점수 분포</div>
+        </div>
+      </div>
+      <div class="section-body" id="bar-area"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Analysis 02</div>
+          <div class="section-title">실행력 프로파일 레이더</div>
+        </div>
+      </div>
+      <div class="radar-wrap">
+        <div class="chart-container"><canvas id="radarChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Analysis 03</div>
+          <div class="section-title">진단 요약표</div>
+        </div>
+      </div>
+      <div style="background:var(--ink);overflow-x:auto">
+        <table class="stbl" id="summary-tbl"></table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-label">Analysis 04</div>
+          <div class="section-title">영역별 개선 가이드</div>
+        </div>
+      </div>
+      <div style="background:var(--ink)">
+        <div class="fb-list" id="fb-list"></div>
+      </div>
+    </div>
+
+    </div>
+
+    <div class="result-actions no-print">
+      <button class="btn-outline-gold" onclick="downloadPDF()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4 7l4 4 4-4M2 13h12"/></svg>
+        PDF 리포트 저장
+      </button>
+      <button class="btn-outline-muted" onclick="restartDiagnostic()">← 다시 진단하기</button>
+    </div>
+  </div>
+
+  <footer class="site-footer no-print">
+    <div class="footer-logo">Executive Diagnostic</div>
+    <div class="footer-note">API 키 불필요 · 완전 오프라인</div>
+  </footer>
+</div>
+
+<script>
+// DATA
+const CATS = [
+  { name:"솔직한 대화", short:"솔직 대화", color:"#c8a96e", num:"01" },
+  { name:"구체적 행동계획", short:"행동계획", color:"#a8c080", num:"02" },
+  { name:"조기 개입·피드백", short:"조기 개입", color:"#80b8c8", num:"03" },
+  { name:"실행 주체 강화", short:"주체 강화", color:"#c8a080", num:"04" },
+  { name:"결과 합의·보상", short:"결과 보상", color:"#c080a0", num:"05" },
+];
+const ICONS = ['◈','◇','◉','◎','◆'];
+const QS = [
+  {c:0,t:"우리 팀(조직)은 불편한 문제나 실패 사례도 솔직하게 공론화하여 토론합니다."},
+  {c:0,t:"현실을 왜곡하거나 좋게 포장하지 않고, 있는 그대로 인식하고 공유합니다."},
+  {c:0,t:"회의나 대화에서 비판적인 의견도 자유롭게 제시할 수 있는 분위기가 형성되어 있습니다."},
+  {c:0,t:"문제가 발생했을 때 원인을 숨기지 않고 솔직히 드러내어 분석합니다."},
+  {c:0,t:"리더가 먼저 부정적인 현실을 인정하고 투명하게 소통하는 모습을 보여줍니다."},
+  {c:1,t:"큰 목표(전략)를 구체적인 실행 단위(Action Item)로 명확히 쪼개어 관리합니다."},
+  {c:1,t:"각 행동 과제에 담당자, 기한, 성공 기준이 구체적으로 정의되어 있습니다."},
+  {c:1,t:"실행 계획은 현실적으로 달성 가능한 수준으로 수립됩니다."},
+  {c:1,t:"계획 수립 시 장애요인을 미리 파악하고 대응 방안을 함께 준비합니다."},
+  {c:1,t:"실행 계획의 진척 상황을 주기적으로 점검하고 업데이트합니다."},
+  {c:2,t:"목표 대비 실제 성과 데이터를 실시간 또는 주기적으로 추적·모니터링합니다."},
+  {c:2,t:"지표에서 이상 신호가 포착되면 즉각적으로 원인을 파악하고 개입합니다."},
+  {c:2,t:"문제가 커지기 전에 조기에 발견하여 신속하게 해결책을 마련합니다."},
+  {c:2,t:"피드백은 정기적이고 일관되게 이루어지며, 건설적인 방식으로 제공됩니다."},
+  {c:2,t:"데이터 기반의 의사결정 문화가 팀 내에 자리잡혀 있습니다."},
+  {c:3,t:"구성원들은 지시를 받기보다 스스로 문제를 발견하고 해결책을 제안합니다."},
+  {c:3,t:"업무 실행에 필요한 권한과 자원이 적절히 구성원에게 위임되어 있습니다."},
+  {c:3,t:"변화나 새로운 도전에 대해 구성원이 두려움보다 주도적 태도를 보입니다."},
+  {c:3,t:"각 구성원이 자신의 역할과 기여가 전체 목표에 어떻게 연결되는지 명확히 알고 있습니다."},
+  {c:3,t:"리더는 마이크로매니지먼트보다 코칭과 지원을 통해 팀을 이끕니다."},
+  {c:4,t:"목표와 성과 기준이 사전에 명확하게 합의되어 있습니다."},
+  {c:4,t:"성과 평가는 공정하고 일관된 기준으로 이루어집니다."},
+  {c:4,t:"탁월한 성과를 낸 구성원은 적절히 인정받고 보상받습니다."},
+  {c:4,t:"성과 달성 여부에 관계없이 동일한 처우를 받는 경우는 거의 없습니다."},
+  {c:4,t:"보상 체계가 실행 동기를 높이는 방향으로 설계되어 있습니다."},
+];
+const LIKERT = [
+  {label:"전혀 그렇지 않다",s:1},{label:"그렇지 않은 편이다",s:2},
+  {label:"보통이다",s:3},{label:"그런 편이다",s:4},{label:"매우 그렇다",s:5}
+];
+const FB = [
+  {
+    high:{t:"솔직하고 투명한 대화 문화가 잘 형성되어 있습니다. 이 강점을 조직 전체로 확산하세요.",a:["정기적인 솔직한 피드백 세션을 제도화","성공/실패 사례를 함께 분석하는 리뷰 문화 유지"]},
+    mid:{t:"솔직한 대화의 중요성은 인식하지만, 실제 실행에는 심리적 장벽이 존재합니다.",a:["심리적 안전감 구축: 비판에 대한 처벌 없는 환경 조성","리더가 먼저 약점과 실수를 공유하는 모범 실천"]},
+    low:{t:"문제를 숨기거나 포장하는 경향이 있어 실행력의 근본적인 제약이 되고 있습니다.",a:["'나쁜 소식 먼저' 원칙 도입 및 리더부터 실천","익명 피드백 채널 운영으로 솔직함의 시작점 마련"]},
+  },
+  {
+    high:{t:"전략을 구체적인 실행으로 전환하는 역량이 뛰어납니다.",a:["OKR 또는 SMART 목표 체계를 정기적으로 리뷰","실행 계획 템플릿을 팀 표준으로 정착"]},
+    mid:{t:"계획은 수립되지만 구체성이 부족하거나 추적이 일관되지 않습니다.",a:["모든 과제에 담당자·기한·성공지표 3요소 의무화","주간 실행 점검 회의 도입"]},
+    low:{t:"막연한 목표 설정으로 실행이 흐지부지되는 경우가 많습니다.",a:["큰 목표를 주 단위 행동 과제로 분해하는 훈련","첫 번째 Action Item을 48시간 내 실행 가능하게 설계"]},
+  },
+  {
+    high:{t:"데이터 기반의 조기 개입과 빠른 피드백 루프가 잘 작동하고 있습니다.",a:["핵심 지표 대시보드를 실시간으로 유지","선행 지표(leading indicator) 관리 강화"]},
+    mid:{t:"모니터링은 하지만 개입 타이밍이 늦거나 피드백이 산발적입니다.",a:["이상 신호 감지 기준(임계값) 사전 정의","주간 데이터 리뷰를 표준 회의 아젠다에 포함"]},
+    low:{t:"문제가 터진 후 대응하는 사후 처리 방식이 주를 이루고 있습니다.",a:["측정 가능한 핵심 지표 3개를 즉시 선정하여 추적 시작","월 1회 데이터 기반 성과 점검 회의 신설"]},
+  },
+  {
+    high:{t:"구성원들이 주도적으로 실행하는 강력한 주인의식 문화가 형성되어 있습니다.",a:["구성원의 아이디어가 실제로 반영되는 채널 강화","자율성과 책임의 균형을 지속적으로 점검"]},
+    mid:{t:"자율성을 부여하려는 의지는 있지만 권한 위임이 불충분합니다.",a:["업무별 의사결정 권한 명확화 (RACI 매트릭스)","작은 프로젝트부터 완전한 자율 실행 기회 부여"]},
+    low:{t:"지시와 통제 중심 문화로 구성원의 주도성이 억제되고 있습니다.",a:["코칭 리더십 훈련: '어떻게 해야 할까요?' 대신 '어떻게 하면 좋을까요?'","구성원이 제안한 아이디어가 실행되는 빠른 성공 사례 만들기"]},
+  },
+  {
+    high:{t:"공정한 평가와 적절한 보상으로 실행 동기가 높게 유지되고 있습니다.",a:["보상 체계의 공정성을 연 1회 점검","비금전적 인정(인정·성장 기회)도 다양하게 활용"]},
+    mid:{t:"평가 기준은 있지만 보상의 차별화나 공정성에 의문이 있습니다.",a:["목표 달성 기준을 구체적으로 사전 합의","성과자에 대한 가시적이고 즉각적인 인정 문화 조성"]},
+    low:{t:"결과에 관계없이 동일한 처우가 이루어져 실행 동기가 저하되고 있습니다.",a:["성과 기반 보상 체계 설계 (금전적·비금전적 병행)","상위 20% 성과자를 위한 차별화된 성장 기회 제공"]},
+  },
+];
+
+let answers = new Array(QS.length).fill(null);
+let curQ = 0;
+let radarChart = null;
+
+// DATE
+const now = new Date();
+document.getElementById('hdr-date').textContent =
+  now.getFullYear() + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + String(now.getDate()).padStart(2,'0');
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  el.style.animation = 'none'; el.offsetHeight;
+  el.style.animation = '';
+}
+
+function startDiagnostic() {
+  answers = new Array(QS.length).fill(null);
+  curQ = 0;
+  renderQ();
+  showScreen('screen-question');
+}
+function restartDiagnostic() { showScreen('screen-intro'); }
+
+function renderQ() {
+  const q = QS[curQ];
+  const cat = CATS[q.c];
+  const pct = Math.round((curQ/QS.length)*100);
+
+  document.getElementById('q-counter').textContent =
+    String(curQ+1).padStart(2,'0') + ' / ' + String(QS.length).padStart(2,'0');
+  document.getElementById('q-fill').style.width = pct + '%';
+  document.getElementById('q-pct').textContent = pct + '%';
+  document.getElementById('q-cat').textContent = cat.num + ' — ' + cat.name;
+  document.getElementById('q-text').textContent = q.t;
+
+  document.getElementById('likert').innerHTML = LIKERT.map(opt => `
+    <div class="lk-opt ${answers[curQ]===opt.s?'selected':''}" onclick="selectA(${opt.s})">
+      <div class="lk-mark"><div class="lk-mark-dot"></div></div>
+      <span class="lk-label">${opt.label}</span>
+      <span class="lk-score">${opt.s}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('btn-prev').disabled = curQ === 0;
+  const nb = document.getElementById('btn-next');
+  nb.textContent = curQ === QS.length-1 ? '결과 보기 →' : '다음 →';
+  nb.disabled = answers[curQ] === null;
+}
+
+function selectA(s) {
+  answers[curQ] = s;
+  document.querySelectorAll('.lk-opt').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('btn-next').disabled = false;
+}
+function nextQ() { if(answers[curQ]===null) return; if(curQ<QS.length-1){curQ++;renderQ();}else showResults(); }
+function prevQ() { if(curQ>0){curQ--;renderQ();} }
+
+function catScore(i) {
+  const idxs = QS.map((q,qi)=>q.c===i?qi:-1).filter(x=>x>=0);
+  return Math.round((idxs.reduce((a,qi)=>a+(answers[qi]||0),0)/(idxs.length*5))*100);
+}
+
+function showResults() {
+  showScreen('screen-result');
+  const scores = CATS.map((_,i)=>catScore(i));
+  const total = Math.round(scores.reduce((a,b)=>a+b,0)/CATS.length);
+
+  document.getElementById('r-score').textContent = total;
+
+  let badge, desc, badgeColor;
+  if(total>=80){badge='STRONG EXECUTOR';desc='실행력의 5가지 핵심 요소가 고루 갖춰진 조직입니다. 이 수준을 유지하며 지속적으로 정교화하세요.';badgeColor='rgba(100,160,60,0.8)';}
+  else if(total>=60){badge='GROWING EXECUTOR';desc='기본 실행 체계는 갖춰졌지만 일부 영역에서 개선이 필요합니다. 약점 영역에 집중 투자하세요.';badgeColor='var(--gold3)';}
+  else if(total>=40){badge='DEVELOPING EXECUTOR';desc='실행력의 핵심 요소들이 부분적으로만 작동하고 있습니다. 체계적인 개선 계획이 시급합니다.';badgeColor='#c88050';}
+  else{badge='REBUILDING NEEDED';desc='실행력의 근본적인 재구축이 필요한 상태입니다. 가장 취약한 2개 영역부터 집중 개선을 시작하세요.';badgeColor='#c05050';}
+  document.getElementById('r-badge').textContent = badge;
+  document.getElementById('r-badge').style.color = badgeColor;
+  document.getElementById('r-badge').style.borderColor = badgeColor.replace('0.8','0.3');
+  document.getElementById('r-desc').textContent = desc;
+
+  // Score cells
+  const sorted = [...scores.map((s,i)=>({s,i}))].sort((a,b)=>b.s-a.s);
+  document.getElementById('score-grid').innerHTML = scores.map((s,i)=>`
+    <div class="score-cell">
+      <div class="sc-rank">${CATS[i].num}</div>
+      <div class="sc-num" style="color:${CATS[i].color}">${s}</div>
+      <div class="sc-name">${CATS[i].short}</div>
+      <div class="sc-bar"><div class="sc-bar-fill" style="width:${s}%;background:${CATS[i].color}"></div></div>
+    </div>
+  `).join('');
+
+  // Bar chart
+  document.getElementById('bar-area').innerHTML = scores.map((s,i)=>`
+    <div class="bar-row">
+      <div class="bar-name">${CATS[i].short}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${s}%;background:${CATS[i].color}"></div></div>
+      <div class="bar-val" style="color:${CATS[i].color}">${s}</div>
+    </div>
+  `).join('');
+
+  // Radar
+  if(radarChart) radarChart.destroy();
+  radarChart = new Chart(document.getElementById('radarChart'),{
+    type:'radar',
+    data:{
+      labels: CATS.map(c=>c.short),
+      datasets:[{
+        label:'점수', data:scores,
+        backgroundColor:'rgba(200,169,110,0.1)',
+        borderColor:'rgba(200,169,110,0.7)',
+        borderWidth:1.5,
+        pointBackgroundColor:'rgba(200,169,110,0.9)',
+        pointRadius:3,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{r:{
+        min:0,max:100,
+        ticks:{stepSize:25,color:'#5a554e',backdropColor:'transparent',font:{size:10}},
+        grid:{color:'rgba(90,85,78,0.3)'},
+        angleLines:{color:'rgba(90,85,78,0.3)'},
+        pointLabels:{color:'#7a7468',font:{size:11}}
+      }}
+    }
+  });
+
+  // Summary table
+  const levels = scores.map(s=>s>=70?'강점':s>=40?'개선 필요':'집중 개선');
+  const lColors = scores.map(s=>s>=70?'#8bc34a':s>=40?'var(--gold3)':'#e57373');
+  document.getElementById('summary-tbl').innerHTML = `
+    <thead><tr>
+      <th>영역</th><th>점수</th><th>수준</th><th>환산 (5점)</th><th>우선순위</th>
+    </tr></thead>
+    <tbody>
+      ${scores.map((s,i)=>`
+        <tr>
+          <td>${CATS[i].name}</td>
+          <td style="font-family:'Playfair Display',serif;font-size:16px;color:${CATS[i].color}">${s}</td>
+          <td style="color:${lColors[i]}">${levels[i]}</td>
+          <td style="font-family:'DM Mono',monospace;font-size:12px">${(s/20).toFixed(1)}</td>
+          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">#${sorted.findIndex(x=>x.i===i)+1}</td>
+        </tr>
+      `).join('')}
+      <tr>
+        <td style="color:var(--gold)">종합 평균</td>
+        <td style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">${total}</td>
+        <td style="color:${badgeColor}">${badge.split(' ')[0]}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${(total/20).toFixed(1)}</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  `;
+
+  // Feedback
+  const sortedFb = [...scores.map((s,i)=>({s,i}))].sort((a,b)=>a.s-b.s);
+  document.getElementById('fb-list').innerHTML = sortedFb.map(({s,i})=>{
+    const fb = FB[i];
+    let lvl, badge2, data;
+    if(s>=70){lvl='strong';badge2='강점';data=fb.high;}
+    else if(s>=40){lvl='develop';badge2='개선 필요';data=fb.mid;}
+    else{lvl='urgent';badge2='집중 개선';data=fb.low;}
+    return `
+      <div class="fb-item">
+        <div class="fb-row">
+          <div class="fb-icon" style="color:${CATS[i].color}">${ICONS[i]}</div>
+          <div style="flex:1">
+            <div class="fb-name">
+              <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-right:8px">${CATS[i].num}</span>
+              ${CATS[i].name}
+              <span class="fb-badge badge-${lvl}">${badge2} · ${s}점</span>
+            </div>
+          </div>
+        </div>
+        <div class="fb-body">${data.t}</div>
+        <ul class="fb-actions">${data.a.map(a=>`<li>${a}</li>`).join('')}</ul>
+      </div>
+    `;
+  }).join('');
+}
+
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const actions = document.querySelector('.result-actions');
+  actions.style.display = 'none';
+  const el = document.getElementById('result-body');
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#0d0d0b' });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pW = pdf.internal.pageSize.getWidth();
+  const pH = pdf.internal.pageSize.getHeight();
+  const imgW = pW - 20;
+  const imgH = (canvas.height / canvas.width) * imgW;
+  let srcY = 0, pageH = pH - 20, totalH = imgH, y = 10;
+  while(totalH > 0) {
+    const chunk = Math.min(pageH, totalH);
+    const tmp = document.createElement('canvas');
+    tmp.width = canvas.width;
+    tmp.height = Math.round((chunk/imgH)*canvas.height);
+    const ctx = tmp.getContext('2d');
+    ctx.drawImage(canvas,0,Math.round((srcY/imgH)*canvas.height),canvas.width,tmp.height,0,0,canvas.width,tmp.height);
+    pdf.addImage(tmp.toDataURL('image/png'),'PNG',10,y,imgW,chunk);
+    totalH -= chunk; srcY += chunk;
+    if(totalH>0){pdf.addPage();y=10;}
+  }
+  pdf.save('실행력진단_리포트.pdf');
+  actions.style.display = 'flex';
+}
+</script>
+</body>
+</html>
